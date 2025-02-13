@@ -17,7 +17,7 @@
     "react-dom": "^18.3.1",
     "react-draggable": "^4.4.6",
     "react-dropzone": "^14.3.5",
-    "react-router-dom": "^7.1.4",
+    "react-router-dom": "^7.1.5",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

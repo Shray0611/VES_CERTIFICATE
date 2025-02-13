@@ -15,7 +15,7 @@ app.use(cors({ origin: 'http://localhost:5173' }));
 app.use(express.json({ limit: '50mb' }));
 
 // Database Connection
-mongoose.connect('mongodb://127.0.0.1:27017/certi_generator')
+mongoose.connect('mongodb://localhost:27017/certi_db')
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
