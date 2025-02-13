@@ -21,13 +21,16 @@ const CertificateGenerator = () => {
     "Courier New",
     "Verdana",
     "Helvetica",
-    "Georgia"
+    "Georgia",
   ];
 
   // Template dropzone
-  const { getRootProps: getTemplateRootProps, getInputProps: getTemplateInputProps } = useDropzone({
+  const {
+    getRootProps: getTemplateRootProps,
+    getInputProps: getTemplateInputProps,
+  } = useDropzone({
     accept: { "image/*": [".png", ".jpg", ".jpeg"] },
-    onDrop: files => {
+    onDrop: (files) => {
       const reader = new FileReader();
       reader.onload = () => setTemplate(reader.result);
       reader.readAsDataURL(files[0]);
@@ -35,49 +38,64 @@ const CertificateGenerator = () => {
   });
 
   // Excel dropzone
-  const { getRootProps: getExcelRootProps, getInputProps: getExcelInputProps } = useDropzone({
-    accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] },
-    onDrop: async files => {
-      const file = await files[0].arrayBuffer();
-      const wb = read(file);
-      const data = utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-      if (!data[0]?.email) alert('Excel file must contain an email column');
-      else setExcelData(data);
-    },
-  });
+  const { getRootProps: getExcelRootProps, getInputProps: getExcelInputProps } =
+    useDropzone({
+      accept: {
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
+          ".xlsx",
+        ],
+      },
+      onDrop: async (files) => {
+        const file = await files[0].arrayBuffer();
+        const wb = read(file);
+        const data = utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        if (!data[0]?.email) alert("Excel file must contain an email column");
+        else setExcelData(data);
+      },
+    });
 
   const addVariable = () => {
     if (!currentVar) return;
-    setVariables(prev => [...prev, {
-      name: currentVar,
-      x: 0,
-      y: 0,
-      fontSize: 24,
-      fontFamily: "Arial",
-      color: "#000000"
-    }]);
+    setVariables((prev) => [
+      ...prev,
+      {
+        name: currentVar,
+        x: 0,
+        y: 0,
+        fontSize: 24,
+        fontFamily: "Arial",
+        color: "#000000",
+      },
+    ]);
     setCurrentVar("");
   };
 
   const updateVariableProperty = (index, property, value) => {
-    setVariables(prev => prev.map((v, i) => 
-      i === index ? { ...v, [property]: value } : v
-    ));
+    setVariables((prev) =>
+      prev.map((v, i) => (i === index ? { ...v, [property]: value } : v))
+    );
   };
 
   const handleDrag = (index, data) => {
-    setVariables(prev => prev.map((v, i) => 
-      i === index ? {
-        ...v,
-        x: (data.x / imgRef.current.offsetWidth) * 100,
-        y: (data.y / imgRef.current.offsetHeight) * 100
-      } : v
-    ));
+    setVariables((prev) =>
+      prev.map((v, i) =>
+        i === index
+          ? {
+              ...v,
+              x: (data.x / imgRef.current.offsetWidth) * 100,
+              y: (data.y / imgRef.current.offsetHeight) * 100,
+            }
+          : v
+      )
+    );
   };
-
-  const handleInputChange = e => {
+  
+  const deleteVariable = (index) => {
+    setVariables(prev => prev.filter((_, i) => i !== index));
+  };
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setUserInput(prev => ({ ...prev, [name]: value }));
+    setUserInput((prev) => ({ ...prev, [name]: value }));
   };
 
   const generatePreview = async () => {
@@ -105,33 +123,36 @@ const CertificateGenerator = () => {
 
   const generateCertificates = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       const response = await fetch("http://localhost:5000/api/templates", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ image: template, variables, excelData }),
       });
-      
+
       if (!response.ok) throw new Error(await response.text());
       const data = await response.json();
       alert("Certificates metadata saved successfully!");
-      navigate('/admin/certificates');
+      navigate("/admin/certificates");
     } catch (error) {
       alert(error.message);
     }
   };
 
-  const loadImage = src => new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.src = src;
-  });
+  const loadImage = (src) =>
+    new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.src = src;
+    });
 
   const exportConfig = () => {
-    const blob = new Blob([JSON.stringify(variables)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(variables)], {
+      type: "application/json",
+    });
     saveAs(blob, "certificate-config.json");
   };
 
@@ -169,7 +190,7 @@ const CertificateGenerator = () => {
                     cursor: "move",
                     fontFamily: varConfig.fontFamily,
                     fontSize: `${varConfig.fontSize}px`,
-                    color: varConfig.color
+                    color: varConfig.color,
                   }}
                 >
                   {varConfig.name}
@@ -182,7 +203,7 @@ const CertificateGenerator = () => {
             <div className="variable-input">
               <input
                 value={currentVar}
-                onChange={e => setCurrentVar(e.target.value)}
+                onChange={(e) => setCurrentVar(e.target.value)}
                 placeholder="New variable name"
               />
               <button onClick={addVariable}>Add Variable</button>
@@ -190,6 +211,15 @@ const CertificateGenerator = () => {
 
             {variables.map((varConfig, index) => (
               <div key={index} className="variable-item">
+                <h4>
+                  {varConfig.name}
+                  <button
+                    className="delete-btn"
+                    onClick={() => deleteVariable(index)}
+                  >
+                    ×
+                  </button>
+                </h4>
                 <h4>{varConfig.name}</h4>
                 <div className="variable-properties">
                   <div className="position-controls">
@@ -198,7 +228,9 @@ const CertificateGenerator = () => {
                       <input
                         type="number"
                         value={varConfig.x}
-                        onChange={e => updateVariableProperty(index, 'x', e.target.value)}
+                        onChange={(e) =>
+                          updateVariableProperty(index, "x", e.target.value)
+                        }
                       />
                     </label>
                     <label>
@@ -206,7 +238,9 @@ const CertificateGenerator = () => {
                       <input
                         type="number"
                         value={varConfig.y}
-                        onChange={e => updateVariableProperty(index, 'y', e.target.value)}
+                        onChange={(e) =>
+                          updateVariableProperty(index, "y", e.target.value)
+                        }
                       />
                     </label>
                   </div>
@@ -215,10 +249,18 @@ const CertificateGenerator = () => {
                       Font:
                       <select
                         value={varConfig.fontFamily}
-                        onChange={e => updateVariableProperty(index, 'fontFamily', e.target.value)}
+                        onChange={(e) =>
+                          updateVariableProperty(
+                            index,
+                            "fontFamily",
+                            e.target.value
+                          )
+                        }
                       >
-                        {fontOptions.map(font => (
-                          <option key={font} value={font}>{font}</option>
+                        {fontOptions.map((font) => (
+                          <option key={font} value={font}>
+                            {font}
+                          </option>
                         ))}
                       </select>
                     </label>
@@ -227,7 +269,13 @@ const CertificateGenerator = () => {
                       <input
                         type="number"
                         value={varConfig.fontSize}
-                        onChange={e => updateVariableProperty(index, 'fontSize', e.target.value)}
+                        onChange={(e) =>
+                          updateVariableProperty(
+                            index,
+                            "fontSize",
+                            e.target.value
+                          )
+                        }
                       />
                     </label>
                     <label>
@@ -235,7 +283,9 @@ const CertificateGenerator = () => {
                       <input
                         type="color"
                         value={varConfig.color}
-                        onChange={e => updateVariableProperty(index, 'color', e.target.value)}
+                        onChange={(e) =>
+                          updateVariableProperty(index, "color", e.target.value)
+                        }
                       />
                     </label>
                   </div>
@@ -286,7 +336,9 @@ const CertificateGenerator = () => {
           Generate Certificates
         </button>
       </div>
-      <div><a href="/admin/certificates">Generated Certificate Sets</a></div>
+      <div>
+        <a href="/admin/certificates">Generated Certificate Sets</a>
+      </div>
     </div>
   );
 };

@@ -28,7 +28,7 @@
   top: 10px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(255,255,255,0.9);
+  background: rgba(255, 255, 255, 0.9);
   padding: 5px 10px;
   border-radius: 4px;
 }
@@ -63,11 +63,12 @@ button:disabled {
   background: #ccc;
   cursor: not-allowed;
 }
-.auth-container, .certificate-list {
+.auth-container,
+.certificate-list {
   max-width: 500px;
   margin: 2rem auto;
   padding: 2rem;
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .certificate-item {
@@ -170,7 +171,8 @@ button:disabled {
   gap: 10px;
 }
 
-.position-controls, .font-controls {
+.position-controls,
+.font-controls {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 10px;
@@ -203,4 +205,11 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 5px;
+}
+.delete-btn {
+  background: #dc3545 !important;
+  float: right;
+  margin: -5px -5px 5px 5px;
+  padding: 4px 8px !important;
+  font-size: 0.8em;
 }
