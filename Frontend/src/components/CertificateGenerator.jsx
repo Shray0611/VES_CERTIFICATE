@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { read, utils } from "xlsx";
 import { saveAs } from "file-saver";
@@ -12,6 +12,10 @@ const CertificateGenerator = () => {
   const [excelData, setExcelData] = useState([]);
   const [userInput, setUserInput] = useState({});
   const [previewCertificate, setPreviewCertificate] = useState(null);
+  const [imageDimensions, setImageDimensions] = useState({
+    width: 0,
+    height: 0,
+  });
   const imgRef = useRef(null);
   const navigate = useNavigate();
 
@@ -23,6 +27,23 @@ const CertificateGenerator = () => {
     "Helvetica",
     "Georgia",
   ];
+
+  // Track image dimensions
+  useEffect(() => {
+    if (imgRef.current) {
+      const updateDimensions = () => {
+        setImageDimensions({
+          width: imgRef.current.offsetWidth,
+          height: imgRef.current.offsetHeight,
+        });
+      };
+
+      const observer = new ResizeObserver(updateDimensions);
+      observer.observe(imgRef.current);
+
+      return () => observer.disconnect();
+    }
+  }, [template]);
 
   // Template dropzone
   const {
@@ -77,22 +98,20 @@ const CertificateGenerator = () => {
   };
 
   const handleDrag = (index, data) => {
+    if (!imgRef.current) return;
+
+    const newX = (data.x / imageDimensions.width) * 100;
+    const newY = (data.y / imageDimensions.height) * 100;
+
     setVariables((prev) =>
-      prev.map((v, i) =>
-        i === index
-          ? {
-              ...v,
-              x: (data.x / imgRef.current.offsetWidth) * 100,
-              y: (data.y / imgRef.current.offsetHeight) * 100,
-            }
-          : v
-      )
+      prev.map((v, i) => (i === index ? { ...v, x: newX, y: newY } : v))
     );
   };
-  
+
   const deleteVariable = (index) => {
-    setVariables(prev => prev.filter((_, i) => i !== index));
+    setVariables((prev) => prev.filter((_, i) => i !== index));
   };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setUserInput((prev) => ({ ...prev, [name]: value }));
@@ -172,31 +191,36 @@ const CertificateGenerator = () => {
               alt="Template Preview"
               style={{ maxWidth: "100%", position: "relative" }}
             />
-            {variables.map((varConfig, index) => (
-              <Draggable
-                key={index}
-                bounds="parent"
-                onStop={(e, data) => handleDrag(index, data)}
-                position={{ x: 0, y: 0 }}
-              >
-                <div
-                  style={{
-                    position: "absolute",
-                    left: `${varConfig.x}%`,
-                    top: `${varConfig.y}%`,
-                    border: "2px dashed #000",
-                    padding: "5px",
-                    backgroundColor: "rgba(255, 255, 255, 0.7)",
-                    cursor: "move",
-                    fontFamily: varConfig.fontFamily,
-                    fontSize: `${varConfig.fontSize}px`,
-                    color: varConfig.color,
-                  }}
+            {variables.map((varConfig, index) => {
+              const xPixel = (varConfig.x / 100) * imageDimensions.width;
+              const yPixel = (varConfig.y / 100) * imageDimensions.height;
+
+              return (
+                <Draggable
+                  key={index}
+                  bounds="parent"
+                  onStop={(e, data) => handleDrag(index, data)}
+                  position={{ x: xPixel, y: yPixel }}
                 >
-                  {varConfig.name}
-                </div>
-              </Draggable>
-            ))}
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: 0,
+                      border: "2px dashed #000",
+                      padding: "5px",
+                      backgroundColor: "rgba(255, 255, 255, 0.7)",
+                      cursor: "move",
+                      fontFamily: varConfig.fontFamily,
+                      fontSize: `${varConfig.fontSize}px`,
+                      color: varConfig.color,
+                    }}
+                  >
+                    {varConfig.name}
+                  </div>
+                </Draggable>
+              );
+            })}
           </div>
 
           <div className="variables-control">
@@ -220,7 +244,6 @@ const CertificateGenerator = () => {
                     ×
                   </button>
                 </h4>
-                <h4>{varConfig.name}</h4>
                 <div className="variable-properties">
                   <div className="position-controls">
                     <label>
