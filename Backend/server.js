@@ -15,7 +15,7 @@ app.use(cors({ origin: 'http://localhost:5173' }));
 app.use(express.json({ limit: '50mb' }));
 
 // Database Connection
-mongoose.connect('mongodb://127.0.0.1:27017/certi_generator')
+mongoose.connect('mongodb://localhost:27017/certi_db')
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
@@ -85,18 +85,18 @@ const auth = (roles = []) => {
 };
 
 // Routes
-app.post('/api/register', async (req, res) => {
-  try {
-    const { email, password, role } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ email, password: hashedPassword, role });
-    await user.save();
-    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET);
-    res.status(201).json({ token, role: user.role });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
+// app.post('/api/register', async (req, res) => {
+//   try {
+//     const { email, password, role } = req.body;
+//     const hashedPassword = await bcrypt.hash(password, 10);
+//     const user = new User({ email, password: hashedPassword, role });
+//     await user.save();
+//     const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET);
+//     res.status(201).json({ token, role: user.role });
+//   } catch (error) {
+//     res.status(400).json({ error: error.message });
+//   }
+// });
 
 app.post('/api/login', async (req, res) => {
   try {
@@ -296,4 +296,56 @@ app.put('/api/certificates/:id', auth(['admin']), async (req, res) => {
   }
 });
 
+app.post('/api/register', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    // Validate email format
+    const emailRegex = /^[a-zA-Z0-9._-]+@ves\.ac\.in$/;
+    if (!emailRegex.test(email)) {
+      throw new Error('Email must be in the ves.ac.in domain');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    // Set default role to student
+    const user = new User({ email, password: hashedPassword, role: 'student' });
+    await user.save();
+    
+    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET);
+    res.status(201).json({ token, role: user.role });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Add these routes to server.js
+
+// Get all users (admin only)
+app.get('/api/admin/users', auth(['admin']), async (req, res) => {
+  try {
+    const users = await User.find({});
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update user role (admin only)
+app.put('/api/admin/users/:id/role', auth(['admin']), async (req, res) => {
+  try {
+    const { role } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { role },
+      { new: true }
+    );
+    
+    if (!user) throw new Error('User not found');
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+

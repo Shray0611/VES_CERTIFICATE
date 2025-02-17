@@ -108,7 +108,7 @@ const CertificateGenerator = () => {
   };
 
   const deleteVariable = (index) => {
-    setVariables(prev => prev.filter((_, i) => i !== index));
+    setVariables((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleInputChange = (e) => {
