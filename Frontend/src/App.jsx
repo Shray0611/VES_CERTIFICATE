@@ -4,33 +4,50 @@ import CertificateGenerator from "./components/CertificateGenerator";
 import CertificateList from "./components/CertificateList";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminCertificates from "./components/AdminCertificates";
-
+import AdminUsers from "./components/AdminUsers";
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<Auth isLogin={false} />} />
         <Route path="/login" element={<Auth isLogin={true} />} />
-        
-        <Route path="/certificates" element={
-          <ProtectedRoute allowedRoles={['student', 'admin']}>
-            <CertificateList />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/generate" element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <CertificateGenerator />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/admin/certificates" element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <AdminCertificates />
-          </ProtectedRoute>
-        } />
+
+        <Route
+          path="/certificates"
+          element={
+            <ProtectedRoute allowedRoles={["student", "admin"]}>
+              <CertificateList />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/generate"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <CertificateGenerator />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/certificates"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminCertificates />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminUsers />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </Router>
   );
 }
-export default App
+export default App;
