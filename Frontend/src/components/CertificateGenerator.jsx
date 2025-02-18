@@ -28,24 +28,19 @@ const CertificateGenerator = () => {
     "Georgia",
   ];
 
-  // Track image dimensions
   useEffect(() => {
     if (imgRef.current) {
-      const updateDimensions = () => {
+      const observer = new ResizeObserver(() => {
         setImageDimensions({
           width: imgRef.current.offsetWidth,
           height: imgRef.current.offsetHeight,
         });
-      };
-
-      const observer = new ResizeObserver(updateDimensions);
+      });
       observer.observe(imgRef.current);
-
       return () => observer.disconnect();
     }
   }, [template]);
 
-  // Template dropzone
   const {
     getRootProps: getTemplateRootProps,
     getInputProps: getTemplateInputProps,
@@ -58,7 +53,6 @@ const CertificateGenerator = () => {
     },
   });
 
-  // Excel dropzone
   const { getRootProps: getExcelRootProps, getInputProps: getExcelInputProps } =
     useDropzone({
       accept: {
@@ -80,6 +74,7 @@ const CertificateGenerator = () => {
     setVariables((prev) => [
       ...prev,
       {
+        type: "text",
         name: currentVar,
         x: 0,
         y: 0,
@@ -91,6 +86,13 @@ const CertificateGenerator = () => {
     setCurrentVar("");
   };
 
+  const addQRVariable = () => {
+    setVariables((prev) => [
+      ...prev,
+      { type: "qr", name: "qrCode", x: 0, y: 0, size: 10 },
+    ]);
+  };
+
   const updateVariableProperty = (index, property, value) => {
     setVariables((prev) =>
       prev.map((v, i) => (i === index ? { ...v, [property]: value } : v))
@@ -99,10 +101,8 @@ const CertificateGenerator = () => {
 
   const handleDrag = (index, data) => {
     if (!imgRef.current) return;
-
     const newX = (data.x / imageDimensions.width) * 100;
     const newY = (data.y / imageDimensions.height) * 100;
-
     setVariables((prev) =>
       prev.map((v, i) => (i === index ? { ...v, x: newX, y: newY } : v))
     );
@@ -119,24 +119,22 @@ const CertificateGenerator = () => {
 
   const generatePreview = async () => {
     if (!template) return;
-
     const img = await loadImage(template);
     const canvas = document.createElement("canvas");
     canvas.width = img.width;
     canvas.height = img.height;
     const ctx = canvas.getContext("2d");
-
     ctx.drawImage(img, 0, 0);
     ctx.textBaseline = "top";
-
-    variables.forEach(({ name, x, y, fontSize, fontFamily, color }) => {
-      const posX = (x / 100) * canvas.width;
-      const posY = (y / 100) * canvas.height;
-      ctx.font = `${fontSize}px ${fontFamily}`;
-      ctx.fillStyle = color;
-      ctx.fillText(userInput[name] || "", posX, posY);
+    variables.forEach(({ type, name, x, y, fontSize, fontFamily, color }) => {
+      if (type === "text") {
+        const posX = (x / 100) * canvas.width;
+        const posY = (y / 100) * canvas.height;
+        ctx.font = `${fontSize}px ${fontFamily}`;
+        ctx.fillStyle = color;
+        ctx.fillText(userInput[name] || "", posX, posY);
+      }
     });
-
     setPreviewCertificate(canvas.toDataURL("image/png"));
   };
 
@@ -151,10 +149,7 @@ const CertificateGenerator = () => {
         },
         body: JSON.stringify({ image: template, variables, excelData }),
       });
-
       if (!response.ok) throw new Error(await response.text());
-      const data = await response.json();
-      alert("Certificates metadata saved successfully!");
       navigate("/admin/certificates");
     } catch (error) {
       alert(error.message);
@@ -194,8 +189,7 @@ const CertificateGenerator = () => {
             {variables.map((varConfig, index) => {
               const xPixel = (varConfig.x / 100) * imageDimensions.width;
               const yPixel = (varConfig.y / 100) * imageDimensions.height;
-
-              return (
+              return varConfig.type === "text" ? (
                 <Draggable
                   key={index}
                   bounds="parent"
@@ -219,6 +213,32 @@ const CertificateGenerator = () => {
                     {varConfig.name}
                   </div>
                 </Draggable>
+              ) : (
+                <Draggable
+                  key={index}
+                  bounds="parent"
+                  onStop={(e, data) => handleDrag(index, data)}
+                  position={{ x: xPixel, y: yPixel }}
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: 0,
+                      border: "2px dashed #000",
+                      backgroundColor: "rgba(255, 255, 255, 0.7)",
+                      cursor: "move",
+                      width: `${
+                        (varConfig.size / 100) * imageDimensions.width
+                      }px`,
+                      height: `${
+                        (varConfig.size / 100) * imageDimensions.width
+                      }px`,
+                    }}
+                  >
+                    [QR Code]
+                  </div>
+                </Draggable>
               );
             })}
           </div>
@@ -230,13 +250,16 @@ const CertificateGenerator = () => {
                 onChange={(e) => setCurrentVar(e.target.value)}
                 placeholder="New variable name"
               />
-              <button onClick={addVariable}>Add Variable</button>
+              <button onClick={addVariable}>Add Text Field</button>
+              <button onClick={addQRVariable} style={{ marginLeft: "10px" }}>
+                Add QR Code
+              </button>
             </div>
 
             {variables.map((varConfig, index) => (
               <div key={index} className="variable-item">
                 <h4>
-                  {varConfig.name}
+                  {varConfig.type === "text" ? varConfig.name : "QR Code"}
                   <button
                     className="delete-btn"
                     onClick={() => deleteVariable(index)}
@@ -267,51 +290,74 @@ const CertificateGenerator = () => {
                       />
                     </label>
                   </div>
-                  <div className="font-controls">
-                    <label>
-                      Font:
-                      <select
-                        value={varConfig.fontFamily}
-                        onChange={(e) =>
-                          updateVariableProperty(
-                            index,
-                            "fontFamily",
-                            e.target.value
-                          )
-                        }
-                      >
-                        {fontOptions.map((font) => (
-                          <option key={font} value={font}>
-                            {font}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      Size:
-                      <input
-                        type="number"
-                        value={varConfig.fontSize}
-                        onChange={(e) =>
-                          updateVariableProperty(
-                            index,
-                            "fontSize",
-                            e.target.value
-                          )
-                        }
-                      />
-                    </label>
-                    <label>
-                      Color:
-                      <input
-                        type="color"
-                        value={varConfig.color}
-                        onChange={(e) =>
-                          updateVariableProperty(index, "color", e.target.value)
-                        }
-                      />
-                    </label>
-                  </div>
+                  {varConfig.type === "text" ? (
+                    <div className="font-controls">
+                      <label>
+                        Font:
+                        <select
+                          value={varConfig.fontFamily}
+                          onChange={(e) =>
+                            updateVariableProperty(
+                              index,
+                              "fontFamily",
+                              e.target.value
+                            )
+                          }
+                        >
+                          {fontOptions.map((font) => (
+                            <option key={font} value={font}>
+                              {font}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        Size:
+                        <input
+                          type="number"
+                          value={varConfig.fontSize}
+                          onChange={(e) =>
+                            updateVariableProperty(
+                              index,
+                              "fontSize",
+                              e.target.value
+                            )
+                          }
+                        />
+                      </label>
+                      <label>
+                        Color:
+                        <input
+                          type="color"
+                          value={varConfig.color}
+                          onChange={(e) =>
+                            updateVariableProperty(
+                              index,
+                              "color",
+                              e.target.value
+                            )
+                          }
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="qr-controls">
+                      <label>
+                        Size (% of width):
+                        <input
+                          type="number"
+                          value={varConfig.size}
+                          onChange={(e) =>
+                            updateVariableProperty(
+                              index,
+                              "size",
+                              e.target.value
+                            )
+                          }
+                        />
+                      </label>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -321,18 +367,20 @@ const CertificateGenerator = () => {
 
       <div className="user-input-section">
         <h3>Enter Your Details</h3>
-        {variables.map((varConfig, index) => (
-          <div key={index} className="input-field">
-            <label>{varConfig.name}</label>
-            <input
-              type="text"
-              name={varConfig.name}
-              value={userInput[varConfig.name] || ""}
-              onChange={handleInputChange}
-              placeholder={`Enter ${varConfig.name}`}
-            />
-          </div>
-        ))}
+        {variables
+          .filter((v) => v.type === "text")
+          .map((varConfig, index) => (
+            <div key={index} className="input-field">
+              <label>{varConfig.name}</label>
+              <input
+                type="text"
+                name={varConfig.name}
+                value={userInput[varConfig.name] || ""}
+                onChange={handleInputChange}
+                placeholder={`Enter ${varConfig.name}`}
+              />
+            </div>
+          ))}
         <button onClick={generatePreview}>Preview Certificate</button>
       </div>
 

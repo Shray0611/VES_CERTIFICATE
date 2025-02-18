@@ -5,6 +5,7 @@ import CertificateList from "./components/CertificateList";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminCertificates from "./components/AdminCertificates";
 import AdminUsers from "./components/AdminUsers";
+import VerifyCertificate from "./components/VerifyCertificate";
 function App() {
   return (
     <Router>
@@ -46,6 +47,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/verify/:code" element={<VerifyCertificate />} />
       </Routes>
     </Router>
   );

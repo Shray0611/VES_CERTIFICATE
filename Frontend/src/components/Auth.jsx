@@ -35,12 +35,6 @@ const Auth = ({ isLogin }) => {
     <div className="auth-container">
       <h2>{isLogin ? "Login" : "Register"}</h2>
       <form onSubmit={handleSubmit}>
-        {/* {!isLogin && (
-          <select value={role} onChange={(e) => setRole(e.target.value)}>
-            <option value="student">Student</option>
-            <option value="admin">Admin</option>
-          </select>
-        )} */}
         <input
           type="email"
           value={email}
