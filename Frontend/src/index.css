@@ -1,9 +1,11 @@
+/* General Container & Layout */
 .container {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
 }
 
+/* Dropzone styles */
 .dropzone {
   border: 2px dashed #ccc;
   padding: 20px;
@@ -11,6 +13,7 @@
   text-align: center;
 }
 
+/* Variable section */
 .variable-section {
   display: grid;
   grid-template-columns: 2fr 1fr;
@@ -18,11 +21,13 @@
   margin: 20px 0;
 }
 
+/* Preview container */
 .preview-container {
   position: relative;
   cursor: crosshair;
 }
 
+/* Instructions overlay */
 .instructions {
   position: absolute;
   top: 10px;
@@ -33,23 +38,27 @@
   border-radius: 4px;
 }
 
+/* Variables control panel */
 .variables-control {
   border: 1px solid #eee;
   padding: 10px;
 }
 
+/* Each variable item */
 .variable-item {
   margin: 10px 0;
   padding: 10px;
   border: 1px solid #eee;
 }
 
+/* Actions container */
 .actions {
   display: flex;
   gap: 10px;
   margin-top: 20px;
 }
 
+/* Button styling */
 button {
   padding: 8px 16px;
   background: #007bff;
@@ -58,11 +67,12 @@ button {
   border-radius: 4px;
   cursor: pointer;
 }
-
 button:disabled {
   background: #ccc;
   cursor: not-allowed;
 }
+
+/* Auth container and certificate list */
 .auth-container,
 .certificate-list {
   max-width: 500px;
@@ -71,6 +81,7 @@ button:disabled {
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
+/* Certificate item styling */
 .certificate-item {
   padding: 1rem;
   margin: 1rem 0;
@@ -78,10 +89,13 @@ button:disabled {
   border-radius: 4px;
 }
 
+/* Error message */
 .error {
   color: red;
   margin-top: 1rem;
 }
+
+/* Collection selector styles */
 .collection-selector {
   margin: 20px 0;
   padding: 15px;
@@ -89,6 +103,7 @@ button:disabled {
   border-radius: 8px;
 }
 
+/* Collection list grid */
 .collection-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -96,6 +111,7 @@ button:disabled {
   margin-top: 10px;
 }
 
+/* Collection item styling */
 .collection-item {
   padding: 10px;
   border: 1px solid #ccc;
@@ -103,16 +119,15 @@ button:disabled {
   cursor: pointer;
   transition: all 0.3s ease;
 }
-
 .collection-item.active {
   background-color: #e3f2fd;
   border-color: #2196f3;
 }
-
 .collection-item:hover {
   background-color: #f5f5f5;
 }
 
+/* Modal for editing */
 .edit-modal {
   position: fixed;
   top: 0;
@@ -124,7 +139,6 @@ button:disabled {
   align-items: center;
   justify-content: center;
 }
-
 .modal-content {
   background: white;
   padding: 20px;
@@ -132,75 +146,65 @@ button:disabled {
   width: 90%;
   max-width: 500px;
 }
-
 .form-field {
   margin-bottom: 15px;
 }
-
 .form-field label {
   display: block;
   margin-bottom: 5px;
 }
-
 .form-field input {
   width: 100%;
   padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
 }
-
 .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 20px;
 }
+
+/* Variable input fields */
 .variable-input {
   display: flex;
   gap: 10px;
   margin-bottom: 15px;
 }
-
 .variable-input input {
   flex: 1;
   padding: 8px;
 }
-
 .variable-properties {
   display: grid;
   gap: 10px;
 }
-
 .position-controls,
 .font-controls {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 10px;
 }
-
 .variable-item label {
   display: block;
   margin-bottom: 5px;
   font-size: 0.9em;
   color: #555;
 }
-
 .variable-item input[type="number"] {
   width: 100%;
   padding: 5px;
 }
-
 .variable-item select {
   width: 100%;
   padding: 5px;
 }
-
 .variable-item input[type="color"] {
   width: 100%;
   height: 30px;
   padding: 2px;
 }
-
 .font-controls > div {
   display: flex;
   flex-direction: column;
@@ -212,4 +216,38 @@ button:disabled {
   margin: -5px -5px 5px 5px;
   padding: 4px 8px !important;
   font-size: 0.8em;
+}
+
+/* Additional styling for QR Code controls */
+.qr-control {
+  margin-top: 20px;
+  padding: 10px;
+  border: 1px solid #eee;
+}
+.qr-control h4 {
+  margin-bottom: 10px;
+}
+.qr-properties label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+/* Verification Page Styles */
+.verify-page {
+  max-width: 500px;
+  margin: 80px auto;
+  padding: 30px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  text-align: center;
+}
+.verify-page h1 {
+  color: #007bff;
+  margin-bottom: 20px;
+  font-size: 2em;
+}
+.verify-page p {
+  font-size: 1.2em;
+  margin: 10px 0;
 }

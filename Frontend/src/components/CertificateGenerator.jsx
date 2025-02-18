@@ -4,6 +4,7 @@ import { read, utils } from "xlsx";
 import { saveAs } from "file-saver";
 import Draggable from "react-draggable";
 import { useNavigate } from "react-router-dom";
+import QRCode from "qrcode";
 
 const CertificateGenerator = () => {
   const [template, setTemplate] = useState(null);
@@ -13,6 +14,15 @@ const CertificateGenerator = () => {
   const [userInput, setUserInput] = useState({});
   const [previewCertificate, setPreviewCertificate] = useState(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
+  // State to control whether the QR field is added or not
+  const [qrEnabled, setQrEnabled] = useState(false);
+  const [qrConfig, setQrConfig] = useState({
+    x: 50, // in percentage
+    y: 50, // in percentage
+    width: 100, // in pixels
+    height: 100, // in pixels
+  });
+  const [qrDataUrl, setQrDataUrl] = useState(null);
   const imgRef = useRef(null);
   const navigate = useNavigate();
 
@@ -25,19 +35,26 @@ const CertificateGenerator = () => {
     "Georgia",
   ];
 
-  // Track image dimensions
+  // Generate a dummy scannable QR code with content "https://example.com" only if QR is enabled.
+  useEffect(() => {
+    if (qrEnabled) {
+      QRCode.toDataURL("https://example.com", { width: qrConfig.width })
+        .then((url) => setQrDataUrl(url))
+        .catch((err) => console.error(err));
+    }
+  }, [qrEnabled, qrConfig.width]);
+
+  // Track image dimensions on template load/resize.
   useEffect(() => {
     if (imgRef.current) {
       const updateDimensions = () => {
         setImageDimensions({
           width: imgRef.current.offsetWidth,
-          height: imgRef.current.offsetHeight
+          height: imgRef.current.offsetHeight,
         });
       };
-      
       const observer = new ResizeObserver(updateDimensions);
       observer.observe(imgRef.current);
-      
       return () => observer.disconnect();
     }
   }, [template]);
@@ -59,9 +76,7 @@ const CertificateGenerator = () => {
   const { getRootProps: getExcelRootProps, getInputProps: getExcelInputProps } =
     useDropzone({
       accept: {
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
-          ".xlsx",
-        ],
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
       },
       onDrop: async (files) => {
         const file = await files[0].arrayBuffer();
@@ -96,15 +111,20 @@ const CertificateGenerator = () => {
 
   const handleDrag = (index, data) => {
     if (!imgRef.current) return;
-    
     const newX = (data.x / imageDimensions.width) * 100;
     const newY = (data.y / imageDimensions.height) * 100;
-    
     setVariables((prev) =>
       prev.map((v, i) =>
         i === index ? { ...v, x: newX, y: newY } : v
       )
     );
+  };
+
+  const handleQrDrag = (data) => {
+    if (!imgRef.current) return;
+    const newX = (data.x / imageDimensions.width) * 100;
+    const newY = (data.y / imageDimensions.height) * 100;
+    setQrConfig((prev) => ({ ...prev, x: newX, y: newY }));
   };
 
   const deleteVariable = (index) => {
@@ -118,16 +138,17 @@ const CertificateGenerator = () => {
 
   const generatePreview = async () => {
     if (!template) return;
-
     const img = await loadImage(template);
     const canvas = document.createElement("canvas");
     canvas.width = img.width;
     canvas.height = img.height;
     const ctx = canvas.getContext("2d");
 
+    // Draw certificate template
     ctx.drawImage(img, 0, 0);
     ctx.textBaseline = "top";
 
+    // Draw text variables
     variables.forEach(({ name, x, y, fontSize, fontFamily, color }) => {
       const posX = (x / 100) * canvas.width;
       const posY = (y / 100) * canvas.height;
@@ -136,21 +157,36 @@ const CertificateGenerator = () => {
       ctx.fillText(userInput[name] || "", posX, posY);
     });
 
+    // Draw QR code if enabled
+    if (qrEnabled && qrDataUrl) {
+      const qrImg = await loadImage(qrDataUrl);
+      const qrPosX = (qrConfig.x / 100) * canvas.width;
+      const qrPosY = (qrConfig.y / 100) * canvas.height;
+      ctx.drawImage(qrImg, qrPosX, qrPosY, qrConfig.width, qrConfig.height);
+    }
+
     setPreviewCertificate(canvas.toDataURL("image/png"));
   };
 
   const generateCertificates = async () => {
     try {
       const token = localStorage.getItem("token");
+      const payload = {
+        image: template,
+        variables,
+        excelData,
+      };
+      if (qrEnabled) {
+        payload.qrConfig = qrConfig;
+      }
       const response = await fetch("http://localhost:5000/api/templates", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ image: template, variables, excelData }),
+        body: JSON.stringify(payload),
       });
-
       if (!response.ok) throw new Error(await response.text());
       const data = await response.json();
       alert("Certificates metadata saved successfully!");
@@ -168,9 +204,11 @@ const CertificateGenerator = () => {
     });
 
   const exportConfig = () => {
-    const blob = new Blob([JSON.stringify(variables)], {
-      type: "application/json",
-    });
+    const config = { variables };
+    if (qrEnabled) {
+      config.qrConfig = qrConfig;
+    }
+    const blob = new Blob([JSON.stringify(config)], { type: "application/json" });
     saveAs(blob, "certificate-config.json");
   };
 
@@ -193,7 +231,6 @@ const CertificateGenerator = () => {
             {variables.map((varConfig, index) => {
               const xPixel = (varConfig.x / 100) * imageDimensions.width;
               const yPixel = (varConfig.y / 100) * imageDimensions.height;
-              
               return (
                 <Draggable
                   key={index}
@@ -220,6 +257,29 @@ const CertificateGenerator = () => {
                 </Draggable>
               );
             })}
+            {qrEnabled && qrDataUrl && (
+              <Draggable
+                bounds="parent"
+                onStop={(e, data) => handleQrDrag(data)}
+                position={{
+                  x: (qrConfig.x / 100) * imageDimensions.width,
+                  y: (qrConfig.y / 100) * imageDimensions.height,
+                }}
+              >
+                <img
+                  src={qrDataUrl}
+                  alt="QR Code"
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    width: qrConfig.width,
+                    height: qrConfig.height,
+                    cursor: "move",
+                  }}
+                />
+              </Draggable>
+            )}
           </div>
 
           <div className="variables-control">
@@ -272,11 +332,7 @@ const CertificateGenerator = () => {
                       <select
                         value={varConfig.fontFamily}
                         onChange={(e) =>
-                          updateVariableProperty(
-                            index,
-                            "fontFamily",
-                            e.target.value
-                          )
+                          updateVariableProperty(index, "fontFamily", e.target.value)
                         }
                       >
                         {fontOptions.map((font) => (
@@ -292,11 +348,7 @@ const CertificateGenerator = () => {
                         type="number"
                         value={varConfig.fontSize}
                         onChange={(e) =>
-                          updateVariableProperty(
-                            index,
-                            "fontSize",
-                            e.target.value
-                          )
+                          updateVariableProperty(index, "fontSize", e.target.value)
                         }
                       />
                     </label>
@@ -314,6 +366,63 @@ const CertificateGenerator = () => {
                 </div>
               </div>
             ))}
+
+            {/* QR Code Field Section */}
+            {!qrEnabled && (
+              <button onClick={() => setQrEnabled(true)}>Add QR Code</button>
+            )}
+            {qrEnabled && (
+              <div className="qr-control">
+                <h4>
+                  QR Code Placement
+                  <button onClick={() => setQrEnabled(false)} className="delete-btn">
+                    ×
+                  </button>
+                </h4>
+                <div className="qr-properties">
+                  <label>
+                    X (%):
+                    <input
+                      type="number"
+                      value={qrConfig.x}
+                      onChange={(e) =>
+                        setQrConfig((prev) => ({ ...prev, x: parseFloat(e.target.value) }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Y (%):
+                    <input
+                      type="number"
+                      value={qrConfig.y}
+                      onChange={(e) =>
+                        setQrConfig((prev) => ({ ...prev, y: parseFloat(e.target.value) }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Width (px):
+                    <input
+                      type="number"
+                      value={qrConfig.width}
+                      onChange={(e) =>
+                        setQrConfig((prev) => ({ ...prev, width: parseInt(e.target.value) }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Height (px):
+                    <input
+                      type="number"
+                      value={qrConfig.height}
+                      onChange={(e) =>
+                        setQrConfig((prev) => ({ ...prev, height: parseInt(e.target.value) }))
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
