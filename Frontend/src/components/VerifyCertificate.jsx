@@ -1,33 +1,56 @@
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 
 const VerifyCertificate = () => {
-  const { id } = useParams();
-  const [certificate, setCertificate] = useState(null);
-  const [error, setError] = useState('');
+  const { code } = useParams();
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`http://localhost:5000/api/verify/${id}`)
-      .then(res => {
-        if (!res.ok) throw new Error('Certificate not found');
-        return res.json();
-      })
-      .then(data => setCertificate(data))
-      .catch(err => setError(err.message));
-  }, [id]);
+    const verifyCertificate = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:5000/api/verify/${code}`
+        );
+        const data = await response.json();
+        setResult(data);
+      } catch (error) {
+        setResult({ error: "Verification failed" });
+      } finally {
+        setLoading(false);
+      }
+    };
+    verifyCertificate();
+  }, [code]);
 
-  if (error) return <div className="verify-page"><h1>Error</h1><p>{error}</p></div>;
-  if (!certificate) return <div className="verify-page"><p>Loading...</p></div>;
+  if (loading) return <div>Verifying...</div>;
 
   return (
-    <div className="verify-page">
-      <h1>Certificate Verified</h1>
-      <p><strong>Name:</strong> {certificate.studentName}</p>
-      <p><strong>Email:</strong> {certificate.email}</p>
-      <p><strong>Division:</strong> {certificate.division}</p>
-      <p><strong>Event:</strong> {certificate.event}</p>
-      <p><strong>Issued On:</strong> {new Date(certificate.issuedAt).toLocaleDateString()}</p>
-      {/* Add additional fields here if needed */}
+    <div className="verification-container">
+      {result?.valid ? (
+        <>
+          <h2>✅ Valid Certificate</h2>
+          <h3>Certificate Details:</h3>
+          <ul>
+            {Object.entries(result.certificate.studentData).map(
+              ([key, value]) => (
+                <li key={key}>
+                  <strong>{key}:</strong> {value}
+                </li>
+              )
+            )}
+          </ul>
+          <p>
+            Issued on:{" "}
+            {new Date(result.certificate.createdAt).toLocaleDateString()}
+          </p>
+          {result.certificate.collection && (
+            <p>Collection: {result.certificate.collection}</p>
+          )}
+        </>
+      ) : (
+        <h2>❌ Invalid Certificate</h2>
+      )}
     </div>
   );
 };
