@@ -1,39 +1,49 @@
-// StudentCertificate.js
 import React, { useState } from "react";
 import { saveAs } from "file-saver";
 
 const StudentCertificate = () => {
   const [certificateId, setCertificateId] = useState("");
   const [error, setError] = useState("");
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  
-// In StudentCertificate.js
-const handleDownload = async (certificateId) => {
-  try {
-    const token = localStorage.getItem('token');
-    console.log("Sending request with token:", token);
+  const handlePreview = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `http://localhost:5000/api/certificates/${certificateId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-    const response = await fetch(`http://localhost:5000/api/certificates/${certificateId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Preview failed");
+      }
 
-    console.log("Response status:", response.status);
-    console.log("Response headers:", response.headers);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Download failed with error:", errorText);
-      throw new Error(errorText || "Download failed");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setPreviewUrl(url);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const blob = await response.blob();
-    console.log("Received blob:", blob);
-    saveAs(blob, `certificate-${certificateId}.png`);
-  } catch (err) {
-    console.error("Error in handleDownload:", err);
-    setError(err.message);
-  }
-};
+  const handleDownload = () => {
+    if (previewUrl) {
+      saveAs(previewUrl, `certificate-${certificateId}.png`);
+    }
+  };
+
+  const closePreview = () => {
+    setPreviewUrl(null);
+    URL.revokeObjectURL(previewUrl);
+  };
 
   return (
     <div className="student-certificate">
@@ -44,7 +54,24 @@ const handleDownload = async (certificateId) => {
         onChange={(e) => setCertificateId(e.target.value)}
         placeholder="Enter Certificate ID"
       />
-      <button onClick={handleDownload}>Download Certificate</button>
+      <div className="certificate-actions">
+        <button onClick={handlePreview} disabled={loading || !certificateId}>
+          {loading ? "Loading..." : "Preview"}
+        </button>
+        <button onClick={handleDownload} disabled={!previewUrl}>
+          Download
+        </button>
+      </div>
+
+      {previewUrl && (
+        <div className="preview-modal">
+          <div className="preview-content">
+            <img src={previewUrl} alt="Certificate Preview" />
+            <button onClick={closePreview}>Close Preview</button>
+          </div>
+        </div>
+      )}
+
       {error && <p className="error">{error}</p>}
     </div>
   );
